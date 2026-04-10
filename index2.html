@@ -1,103 +1,96 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mini WebGIS</title>
+    <title>Mini WebGIS Rayya</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
     <style>
-        #map {
-            width: 100%;
-            height: 400px;
-            background: linear-gradient(lightblue, lightgreen);
-            position: relative;
-            border: 1px solid black;
+        body {
+            margin: 0;
+            font-family: Arial;
         }
 
-        .marker {
-            width: 12px;
-            height: 12px;
-            position: absolute;
-            border-radius: 50%;
+        h2 {
+            padding: 10px;
+        }
+
+        #map {
+            width: 100%;
+            height: 500px; /* 🔥 WAJIB */
+        }
+
+        button {
+            margin: 5px;
+            padding: 8px;
         }
     </style>
 </head>
+
 <body>
 
-<h3>Mini WebGIS</h3>
+<h2>Mini WebGIS Rayya</h2>
 
-<button id="btnAdd">add Marker</button>
-<button id="btnClear">Clear All</button>
-<button id="btnToggle">Toggle Layer</button>
+<button onclick="addMarker()">Add Marker</button>
+<button onclick="clearMarker()">Clear All Markers</button>
+<button onclick="toggleLayer()">Toggle Layer</button>
 
 <div id="map"></div>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
 
-let map = document.getElementById("map");
-let markers = [];
-let tampil = true;
+// pastikan halaman sudah siap
+document.addEventListener("DOMContentLoaded", function(){
 
-// class marker
-class Marker {
-    constructor(x, y, warna) {
-        this.el = document.createElement("div");
-        this.el.className = "marker";
+    // ================= MAP =================
+    var map = L.map('map').setView([-7.8, 110.37], 12);
 
-        this.el.style.left = x + "px";
-        this.el.style.top = y + "px";
-        this.el.style.background = warna;
+    // basemap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-        this.el.onclick = () => {
-            alert("Marker diklik");
-        };
+    // ================= MARKER =================
+    let markers = [];
+    let tampil = true;
+
+    // tambah marker
+    window.addMarker = function(){
+        let lat = -7.8 + (Math.random() * 0.02);
+        let lng = 110.37 + (Math.random() * 0.02);
+
+        let marker = L.marker([lat, lng]).addTo(map)
+            .bindPopup("Koordinat:<br>" + lat.toFixed(5) + ", " + lng.toFixed(5));
+
+        markers.push(marker);
     }
 
-    addTo(peta) {
-        peta.appendChild(this.el);
+    // clear marker
+    window.clearMarker = function(){
+        markers.forEach(function(m){
+            map.removeLayer(m);
+        });
+        markers = [];
     }
 
-    hapus() {
-        this.el.remove();
-    }
-}
+    // toggle marker
+    window.toggleLayer = function(){
+        tampil = !tampil;
 
-// tambah marker
-document.getElementById("btnAdd").onclick = function() {
-
-    let warna = ["red","blue","green"];
-    let pilih = warna[Math.floor(Math.random()*3)];
-
-    let x = Math.random()*380;
-    let y = Math.random()*380;
-
-    let m = new Marker(x, y, pilih);
-    m.addTo(map);
-
-    markers.push(m);
-}
-
-// hapus semua marker
-document.getElementById("btnClear").onclick = function() {
-
-    for (let i = 0; i < markers.length; i++) {
-        markers[i].hapus();
+        markers.forEach(function(m){
+            if(tampil){
+                m.addTo(map);
+            } else {
+                map.removeLayer(m);
+            }
+        });
     }
 
-    markers = [];
-}
-
-// toggle layer
-document.getElementById("btnToggle").onclick = function() {
-
-    tampil = !tampil;
-
-    for (let i = 0; i < markers.length; i++) {
-        if (tampil) {
-            markers[i].el.style.display = "block";
-        } else {
-            markers[i].el.style.display = "none";
-        }
-    }
-}
-
+});
 </script>
 
 </body>
