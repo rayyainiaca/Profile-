@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebGIS Interaktif</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+        }
+
+        #header {
+            background: #2c3e50;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        #map {
+            height: 90vh;
+        }
+
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 999;
+            font-size: 14px;
+        }
+
+        #filter {
+            position: absolute;
+            top: 80px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            z-index: 999;
+            font-size: 14px;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="header">
+    🌍 WebGIS Interaktif - Tugas SIG
+</div>
+
+<div id="map"></div>
+
+<!-- LEGEND -->
+<div id="legend">
+    <b>Legenda</b><br>
+    🔴 Kategori A<br>
+    🔵 Kategori B
+</div>
+
+<!-- FILTER (TOGGLE DATA) -->
+<div id="filter">
+    <b>Filter Data</b><br>
+    <input type="checkbox" id="katA" checked> Kategori A<br>
+    <input type="checkbox" id="katB" checked> Kategori B
+</div>
+
+<!-- LOADING -->
+<div id="loading">⏳ Memuat data...</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+// ================= MAP =================
+var map = L.map('map').setView([-7.8, 110.37], 12);
+
+// Basemap 1
+var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+
+// Basemap 2
+var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+
+osm.addTo(map);
+
+// Switcher
+var baseMaps = {
+    "OpenStreetMap": osm,
+    "Topografi": topo
+};
+
+L.control.layers(baseMaps).addTo(map);
+
+// ================= LAYER =================
+var layerA = L.layerGroup().addTo(map);
+var layerB = L.layerGroup().addTo(map);
+
+// ================= DATA (GOOGLE SHEETS) =================
+// 🔴 GANTI DENGAN ID GOOGLE SHEETS KAMU
+let sheetURL = "https://opensheet.elk.sh/ISI_ID_KAMU/Sheet1";
+
+// ================= FETCH DATA =================
+fetch(sheetURL)
+.then(response => response.json())
+.then(data => {
+
+    data.forEach(function(d){
+
+        let lat = parseFloat(d.lat);
+        let lng = parseFloat(d.lng);
+        let kategori = d.kategori;
+
+        let marker = L.marker([lat, lng])
+            .bindPopup("<b>" + d.nama + "</b><br>Kategori: " + kategori);
+
+        if(kategori === "A"){
+            marker.addTo(layerA);
+        } else if(kategori === "B"){
+            marker.addTo(layerB);
+        }
+
+    });
+
+    // hilangkan loading
+    document.getElementById("loading").style.display = "none";
+
+});
+
+// ================= TOGGLE DATA =================
+
+// Toggle kategori A
+document.getElementById("katA").onchange = function(){
+    if(this.checked){
+        map.addLayer(layerA);
+    } else {
+        map.removeLayer(layerA);
+    }
+};
+
+// Toggle kategori B
+document.getElementById("katB").onchange = function(){
+    if(this.checked){
+        map.addLayer(layerB);
+    } else {
+        map.removeLayer(layerB);
+    }
+};
+
+</script>
+
+</body>
+</html>
