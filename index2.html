@@ -1,166 +1,164 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebGIS Interaktif</title>
-
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <title>Mini WebGIS Kreatif</title>
 
     <style>
         body {
-            margin: 0;
             font-family: Arial;
+            text-align: center;
+            background: #f0f2f5;
         }
 
-        #header {
-            background: #2c3e50;
-            color: white;
-            padding: 12px;
-            text-align: center;
-            font-size: 18px;
+        h2 {
+            margin-top: 10px;
         }
 
         #map {
-            height: 90vh;
-        }
-
-        #legend {
-            position: absolute;
-            bottom: 20px;
-            left: 10px;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 999;
-            font-size: 14px;
-        }
-
-        #filter {
-            position: absolute;
-            top: 80px;
-            right: 10px;
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            z-index: 999;
-            font-size: 14px;
-        }
-
-        #loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 15px;
+            width: 600px;
+            height: 400px;
+            margin: auto;
+            background: linear-gradient(#87ceeb, #90ee90);
+            position: relative;
             border-radius: 10px;
-            font-size: 16px;
-            z-index: 1000;
+            border: 2px solid #333;
+            overflow: hidden;
         }
+
+        .marker {
+            width: 14px;
+            height: 14px;
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .marker:hover {
+            transform: scale(1.6);
+        }
+
+        .panel {
+            margin: 10px;
+        }
+
+        button, select {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #ddd;
+        }
+
+        #info {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 
 <body>
 
-<div id="header">
-    🌍 WebGIS Interaktif - Tugas SIG
+<h2>🌍 Mini WebGIS Interaktif</h2>
+
+<div class="panel">
+    Pilih warna:
+    <select id="warna">
+        <option value="red">Merah</option>
+        <option value="blue">Biru</option>
+        <option value="green">Hijau</option>
+        <option value="purple">Ungu</option>
+    </select>
+
+    <button id="btnClear">Clear All</button>
+    <button id="btnToggle">Toggle Layer</button>
 </div>
 
 <div id="map"></div>
 
-<!-- LEGEND -->
-<div id="legend">
-    <b>Legenda</b><br>
-    🔴 Kategori A<br>
-    🔵 Kategori B
-</div>
-
-<!-- FILTER (TOGGLE DATA) -->
-<div id="filter">
-    <b>Filter Data</b><br>
-    <input type="checkbox" id="katA" checked> Kategori A<br>
-    <input type="checkbox" id="katB" checked> Kategori B
-</div>
-
-<!-- LOADING -->
-<div id="loading">⏳ Memuat data...</div>
-
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<div id="info">Jumlah Marker: 0</div>
 
 <script>
 
-// ================= MAP =================
-var map = L.map('map').setView([-7.8, 110.37], 12);
+let map = document.getElementById("map");
+let markers = [];
+let tampil = true;
 
-// Basemap 1
-var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+// CLASS MARKER
+class Marker {
+    constructor(x, y, warna) {
+        this.x = x;
+        this.y = y;
 
-// Basemap 2
-var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+        this.el = document.createElement("div");
+        this.el.className = "marker";
 
-osm.addTo(map);
+        this.el.style.left = x + "px";
+        this.el.style.top = y + "px";
+        this.el.style.background = warna;
 
-// Switcher
-var baseMaps = {
-    "OpenStreetMap": osm,
-    "Topografi": topo
-};
+        // klik marker → tampilkan koordinat
+        this.el.onclick = () => {
+            alert("Koordinat: (" + this.x.toFixed(0) + ", " + this.y.toFixed(0) + ")");
+        };
+    }
 
-L.control.layers(baseMaps).addTo(map);
+    addTo(peta) {
+        peta.appendChild(this.el);
+    }
 
-// ================= LAYER =================
-var layerA = L.layerGroup().addTo(map);
-var layerB = L.layerGroup().addTo(map);
+    hapus() {
+        this.el.remove();
+    }
+}
 
-// ================= DATA (GOOGLE SHEETS) =================
-// 🔴 GANTI DENGAN ID GOOGLE SHEETS KAMU
-let sheetURL = "https://opensheet.elk.sh/ISI_ID_KAMU/Sheet1";
+// UPDATE INFO
+function updateInfo() {
+    document.getElementById("info").innerText =
+        "Jumlah Marker: " + markers.length;
+}
 
-// ================= FETCH DATA =================
-fetch(sheetURL)
-.then(response => response.json())
-.then(data => {
+// KLIK MAP → TAMBAH MARKER
+map.addEventListener("click", function(e) {
 
-    data.forEach(function(d){
+    let rect = map.getBoundingClientRect();
 
-        let lat = parseFloat(d.lat);
-        let lng = parseFloat(d.lng);
-        let kategori = d.kategori;
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
 
-        let marker = L.marker([lat, lng])
-            .bindPopup("<b>" + d.nama + "</b><br>Kategori: " + kategori);
+    let warna = document.getElementById("warna").value;
 
-        if(kategori === "A"){
-            marker.addTo(layerA);
-        } else if(kategori === "B"){
-            marker.addTo(layerB);
-        }
+    let m = new Marker(x, y, warna);
+    m.addTo(map);
 
-    });
+    markers.push(m);
 
-    // hilangkan loading
-    document.getElementById("loading").style.display = "none";
-
+    updateInfo();
 });
 
-// ================= TOGGLE DATA =================
+// CLEAR MARKER
+document.getElementById("btnClear").onclick = function() {
 
-// Toggle kategori A
-document.getElementById("katA").onchange = function(){
-    if(this.checked){
-        map.addLayer(layerA);
-    } else {
-        map.removeLayer(layerA);
+    for (let i = 0; i < markers.length; i++) {
+        markers[i].hapus();
     }
+
+    markers = [];
+    updateInfo();
 };
 
-// Toggle kategori B
-document.getElementById("katB").onchange = function(){
-    if(this.checked){
-        map.addLayer(layerB);
-    } else {
-        map.removeLayer(layerB);
+// TOGGLE LAYER
+document.getElementById("btnToggle").onclick = function() {
+
+    tampil = !tampil;
+
+    for (let i = 0; i < markers.length; i++) {
+        markers[i].el.style.display = tampil ? "block" : "none";
     }
 };
 
